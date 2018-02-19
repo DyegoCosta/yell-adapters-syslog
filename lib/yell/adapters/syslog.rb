@@ -7,6 +7,8 @@ module Yell #:nodoc:
 
     class Syslog < Yell::Adapters::Base
 
+      include ::Yell::Helpers::Formatter
+
       # Syslog severities
       #
       # `man syslog` to see the severities
@@ -50,13 +52,14 @@ module Yell #:nodoc:
       }
 
       setup do |options|
-        self.ident    = Yell.__fetch__(options, :ident, :default => $0)
-        self.options  = Yell.__fetch__(options, :options, :default => [:pid, :cons])
-        self.facility = Yell.__fetch__(options, :facility)
+        self.ident     = Yell.__fetch__(options, :ident, :default => $0)
+        self.options   = Yell.__fetch__(options, :options, :default => [:pid, :cons])
+        self.facility  = Yell.__fetch__(options, :facility)
+        self.formatter = Yell.__fetch__(options, :formatter)
       end
 
       write do |event|
-        stream.log( Severities[event.level], format(*event.messages) )
+        stream.log( Severities[event.level], format(event) )
       end
 
       close do
@@ -163,8 +166,9 @@ module Yell #:nodoc:
       end
 
       # Borrowed from [SyslogLogger](https://github.com/seattlerb/sysloglogger)
-      def format( *messages )
-        messages.map { |m| to_message(m) }.join( ' ' )
+      def format( event )
+        return formatter.call(event) if formatter
+        event.messages.map { |m| to_message(m) }.join( ' ' )
       end
 
       def to_message( m )
