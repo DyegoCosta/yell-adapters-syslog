@@ -167,18 +167,26 @@ module Yell #:nodoc:
 
       # Borrowed from [SyslogLogger](https://github.com/seattlerb/sysloglogger)
       def format( event )
-        return formatter.call(event) if formatter
+        if formatter
+          message = formatter.call(event)
+          escape_percentage_sign!(message)
+          return message
+        end
+
         event.messages.map { |m| to_message(m) }.join( ' ' )
       end
 
       def to_message( m )
         message = m.to_s
+        escape_percentage_sign!(message)
 
         message.strip.
-          gsub(/%/, '%%'). # syslog(3) freaks on % (printf)
           gsub(/\e\[[^m]*m/, '') # remove useless ansi color codes
       end
 
+      def escape_percentage_sign!( m )
+        m.gsub!(/%/, '%%') # syslog(3) freaks on % (printf)
+      end
     end
 
     register( :syslog, Yell::Adapters::Syslog )
